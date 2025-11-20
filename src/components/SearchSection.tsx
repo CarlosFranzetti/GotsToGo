@@ -124,6 +124,26 @@ const SearchSection = () => {
     );
   };
 
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Enter a location",
+        description: "Please enter an address or use your current location",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const filterLabels = selectedFilters.map(id => 
+      filters.find(f => f.id === id)?.label
+    ).filter(Boolean);
+
+    toast({
+      title: "Searching...",
+      description: `Looking for bathrooms near: ${searchQuery}${filterLabels.length > 0 ? ` with filters: ${filterLabels.join(", ")}` : ""}`,
+    });
+  };
+
   return (
     <section id="search-section" className="py-16 px-4 bg-card">
       <div className="container mx-auto max-w-4xl">
@@ -170,7 +190,7 @@ const SearchSection = () => {
             >
               <Locate className={`h-5 w-5 ${isLoadingLocation ? 'animate-pulse' : ''}`} />
             </Button>
-            <Button size="lg" className="h-12 px-6">
+            <Button size="lg" className="h-12 px-6" onClick={handleSearch}>
               <Search className="mr-2 h-5 w-5" />
               Search
             </Button>
