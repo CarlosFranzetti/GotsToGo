@@ -1,7 +1,7 @@
 const Hero = () => {
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-12 px-4">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-8 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
