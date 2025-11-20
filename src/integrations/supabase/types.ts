@@ -14,7 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bathrooms: {
+        Row: {
+          address: string
+          changing_table: boolean | null
+          created_at: string
+          description: string | null
+          gender_neutral: boolean | null
+          id: string
+          is_24_7: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          opening_hours: Json | null
+          rating: number | null
+          requires_key: boolean | null
+          step_free_entry: boolean | null
+          updated_at: string
+          verified: boolean | null
+          wheelchair_accessible: boolean | null
+        }
+        Insert: {
+          address: string
+          changing_table?: boolean | null
+          created_at?: string
+          description?: string | null
+          gender_neutral?: boolean | null
+          id?: string
+          is_24_7?: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          opening_hours?: Json | null
+          rating?: number | null
+          requires_key?: boolean | null
+          step_free_entry?: boolean | null
+          updated_at?: string
+          verified?: boolean | null
+          wheelchair_accessible?: boolean | null
+        }
+        Update: {
+          address?: string
+          changing_table?: boolean | null
+          created_at?: string
+          description?: string | null
+          gender_neutral?: boolean | null
+          id?: string
+          is_24_7?: boolean | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          opening_hours?: Json | null
+          rating?: number | null
+          requires_key?: boolean | null
+          step_free_entry?: boolean | null
+          updated_at?: string
+          verified?: boolean | null
+          wheelchair_accessible?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

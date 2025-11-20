@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import BathroomResults from "./BathroomResults";
 
 interface AddressSuggestion {
   display_name: string;
@@ -17,6 +19,10 @@ const SearchSection = () => {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [searchLocation, setSearchLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [bathrooms, setBathrooms] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const { toast } = useToast();
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +76,7 @@ const SearchSection = () => {
 
   const handleSuggestionClick = (suggestion: AddressSuggestion) => {
     setSearchQuery(suggestion.display_name);
+    setSearchLocation({ lat: parseFloat(suggestion.lat), lon: parseFloat(suggestion.lon) });
     setShowSuggestions(false);
     toast({
       title: "Location selected",
@@ -99,6 +106,7 @@ const SearchSection = () => {
           );
           const data = await response.json();
           setSearchQuery(data.display_name);
+          setSearchLocation({ lat: latitude, lon: longitude });
           toast({
             title: "Location found",
             description: "Using your current location",
@@ -124,7 +132,19 @@ const SearchSection = () => {
     );
   };
 
-  const handleSearch = () => {
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast({
         title: "Enter a location",
@@ -134,14 +154,62 @@ const SearchSection = () => {
       return;
     }
 
-    const filterLabels = selectedFilters.map(id => 
-      filters.find(f => f.id === id)?.label
-    ).filter(Boolean);
+    setIsSearching(true);
+    setHasSearched(true);
 
-    toast({
-      title: "Searching...",
-      description: `Looking for bathrooms near: ${searchQuery}${filterLabels.length > 0 ? ` with filters: ${filterLabels.join(", ")}` : ""}`,
-    });
+    try {
+      // Build the query
+      let query = supabase
+        .from('bathrooms')
+        .select('*');
+
+      // Apply filters
+      selectedFilters.forEach(filterId => {
+        if (filterId === 'wheelchair') {
+          query = query.eq('wheelchair_accessible', true);
+        } else if (filterId === 'changing') {
+          query = query.eq('changing_table', true);
+        } else if (filterId === 'stepfree') {
+          query = query.eq('step_free_entry', true);
+        } else if (filterId === 'gender') {
+          query = query.eq('gender_neutral', true);
+        }
+      });
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Calculate distances and sort by distance if we have search location
+      let results = data || [];
+      if (searchLocation) {
+        results = results.map(bathroom => ({
+          ...bathroom,
+          distance: calculateDistance(
+            searchLocation.lat,
+            searchLocation.lon,
+            Number(bathroom.latitude),
+            Number(bathroom.longitude)
+          )
+        })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      }
+
+      setBathrooms(results);
+      
+      toast({
+        title: "Search complete",
+        description: `Found ${results.length} bathroom${results.length !== 1 ? 's' : ''}`,
+      });
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search failed",
+        description: "There was an error searching for bathrooms. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -190,7 +258,7 @@ const SearchSection = () => {
             >
               <Locate className={`h-5 w-5 ${isLoadingLocation ? 'animate-pulse' : ''}`} />
             </Button>
-            <Button size="lg" className="h-12 px-6" onClick={handleSearch}>
+            <Button size="lg" className="h-12 px-6" onClick={handleSearch} disabled={isSearching}>
               <Search className="mr-2 h-5 w-5" />
               Search
             </Button>
@@ -211,6 +279,12 @@ const SearchSection = () => {
               ))}
             </div>
           </div>
+
+          {hasSearched && (
+            <div className="mt-8">
+              <BathroomResults bathrooms={bathrooms} isLoading={isSearching} />
+            </div>
+          )}
         </div>
       </div>
     </section>
