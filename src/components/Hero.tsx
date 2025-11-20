@@ -25,14 +25,6 @@ const Hero = () => {
               <Search className="mr-2 h-5 w-5" />
               Find a Bathroom Now
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => document.getElementById("apps-section")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-lg px-8"
-            >
-              View Apps & Resources
-            </Button>
           </div>
         </div>
       </div>
