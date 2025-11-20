@@ -1,12 +1,24 @@
-import { useState } from "react";
-import { Search, MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, MapPin, Locate } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+interface AddressSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
 
 const SearchSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const { toast } = useToast();
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const filters = [
     { id: "wheelchair", label: "Wheelchair Accessible" },
@@ -23,6 +35,95 @@ const SearchSection = () => {
     );
   };
 
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchQuery.length < 3) {
+        setSuggestions([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`
+        );
+        const data = await response.json();
+        setSuggestions(data);
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSuggestionClick = (suggestion: AddressSuggestion) => {
+    setSearchQuery(suggestion.display_name);
+    setShowSuggestions(false);
+    toast({
+      title: "Location selected",
+      description: suggestion.display_name,
+    });
+  };
+
+  const handleUseMyLocation = () => {
+    setIsLoadingLocation(true);
+    
+    if (!navigator.geolocation) {
+      toast({
+        title: "Location not supported",
+        description: "Your browser doesn't support geolocation.",
+        variant: "destructive",
+      });
+      setIsLoadingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await response.json();
+          setSearchQuery(data.display_name);
+          toast({
+            title: "Location found",
+            description: "Using your current location",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Could not get address from location",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingLocation(false);
+        }
+      },
+      (error) => {
+        toast({
+          title: "Location access denied",
+          description: "Please enable location access in your browser settings.",
+          variant: "destructive",
+        });
+        setIsLoadingLocation(false);
+      }
+    );
+  };
+
   return (
     <section id="search-section" className="py-16 px-4 bg-card">
       <div className="container mx-auto max-w-4xl">
@@ -33,16 +134,42 @@ const SearchSection = () => {
           </div>
 
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div ref={searchRef} className="relative flex-1">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
               <Input
                 type="text"
                 placeholder="Enter address, neighborhood, or landmark..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
                 className="pl-10 h-12 text-base"
               />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="px-4 py-3 hover:bg-muted cursor-pointer transition-colors border-b border-border last:border-b-0"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      <p className="text-sm text-foreground">{suggestion.display_name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="h-12 px-4"
+              onClick={handleUseMyLocation}
+              disabled={isLoadingLocation}
+            >
+              <Locate className={`h-5 w-5 ${isLoadingLocation ? 'animate-pulse' : ''}`} />
+            </Button>
             <Button size="lg" className="h-12 px-6">
               <Search className="mr-2 h-5 w-5" />
               Search

@@ -11,12 +11,10 @@ const Hero = () => {
       <div className="container mx-auto max-w-6xl">
         <div className="text-center space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-            Find Accessible Bathrooms in{" "}
-            <span className="text-primary">New York City</span>
+            <span className="text-primary">Gots to Go</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-            Search stress-free for clean, accessible restrooms across all five boroughs.
-            Real-time info, honest reviews, and ADA-accessible locations.
+            Find accessible bathrooms in New York City. Search stress-free for clean, accessible restrooms across all five boroughs with real-time info and honest reviews.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button 
