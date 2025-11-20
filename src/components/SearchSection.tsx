@@ -213,7 +213,7 @@ const SearchSection = () => {
   };
 
   return (
-    <section id="search-section" className="py-16 px-4 bg-card">
+    <section id="search-section" className="py-6 px-4 bg-card">
       <div className="container mx-auto max-w-4xl">
         <div className="space-y-6">
           <div className="text-center space-y-2">
