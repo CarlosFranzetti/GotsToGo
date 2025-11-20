@@ -6,13 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Database, LogOut } from "lucide-react";
+import { Loader2, Database, LogOut, Globe, MapPin } from "lucide-react";
 
 const Admin = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [isImportingRefuge, setIsImportingRefuge] = useState(false);
+  const [isImportingOSM, setIsImportingOSM] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -103,6 +105,76 @@ const Admin = () => {
     }
   };
 
+  const handleImportRefuge = async () => {
+    setIsImportingRefuge(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-refuge-data`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error || "Import failed");
+
+      toast({
+        title: "Refuge Restrooms Import Complete",
+        description: `Imported: ${result.imported}, Merged: ${result.merged}, Skipped: ${result.skipped}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Import Error",
+        description: error.message || "Failed to import Refuge data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingRefuge(false);
+    }
+  };
+
+  const handleImportOSM = async () => {
+    setIsImportingOSM(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-osm-data`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error || "Import failed");
+
+      toast({
+        title: "OpenStreetMap Import Complete",
+        description: `Imported: ${result.imported}, Merged: ${result.merged}, Skipped: ${result.skipped}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Import Error",
+        description: error.message || "Failed to import OSM data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingOSM(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -177,15 +249,15 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                NYC Open Data Import
+                NYC Open Data
               </CardTitle>
               <CardDescription>
-                Import accessible bathroom locations from NYC Open Data. Duplicates will be merged automatically.
+                NYC government data on accessible bathrooms
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -206,7 +278,63 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-muted/30">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Refuge Restrooms
+              </CardTitle>
+              <CardDescription>
+                International crowd-sourced accessible bathrooms
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={handleImportRefuge} 
+                disabled={isImportingRefuge}
+                className="w-full"
+              >
+                {isImportingRefuge ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  "Import Refuge Data"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                OpenStreetMap
+              </CardTitle>
+              <CardDescription>
+                Global crowd-sourced accessible toilets data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={handleImportOSM} 
+                disabled={isImportingOSM}
+                className="w-full"
+              >
+                {isImportingOSM ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  "Import OSM Data"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-muted/30 md:col-span-2">
             <CardHeader>
               <CardTitle>Google Places Import</CardTitle>
               <CardDescription>
