@@ -101,10 +101,19 @@ const SearchSection = () => {
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
+          console.log('Location found:', { latitude, longitude });
+          
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
           );
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch address');
+          }
+          
           const data = await response.json();
+          console.log('Address data:', data);
+          
           setSearchQuery(data.display_name);
           setSearchLocation({ lat: latitude, lon: longitude });
           toast({
@@ -112,6 +121,7 @@ const SearchSection = () => {
             description: "Using your current location",
           });
         } catch (error) {
+          console.error('Reverse geocoding error:', error);
           toast({
             title: "Error",
             description: "Could not get address from location",
@@ -122,12 +132,32 @@ const SearchSection = () => {
         }
       },
       (error) => {
+        console.error('Geolocation error:', error);
+        let description = "Please enable location access in your browser settings.";
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            description = "Location access was denied. Please check your browser settings.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            description = "Location information is unavailable. Please try again.";
+            break;
+          case error.TIMEOUT:
+            description = "Location request timed out. Please try again.";
+            break;
+        }
+        
         toast({
-          title: "Location access denied",
-          description: "Please enable location access in your browser settings.",
+          title: "Location access failed",
+          description,
           variant: "destructive",
         });
         setIsLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
